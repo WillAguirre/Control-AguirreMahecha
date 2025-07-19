@@ -327,12 +327,12 @@ def acceder_datos(datos_organizados, carpeta, archivo, columna=None):
 # Cargar los datos automáticamente
 datos = cargar_archivos_excel_automatico()
 lista_clinicas = list(datos.keys())
-clinica_seleccionada = st.sidebar.selectbox("Selecciona una clínica", lista_clinicas)
+clinica_seleccionada = st.sidebar.selectbox("Selecciona una clínica", lista_clinicas,index=0)
 # Acceder a los datos de la clínica seleccionada
 if clinica_seleccionada:
     archivos_clinica = datos[clinica_seleccionada]
     lista_archivos = list(archivos_clinica.keys())
-    archivo_seleccionado = st.sidebar.selectbox("Selecciona un archivo", lista_archivos)
+    archivo_seleccionado = st.sidebar.selectbox("Selecciona un archivo", lista_archivos,index=0)
     
     if archivo_seleccionado:
         # Acceder al DataFrame del archivo seleccionado
