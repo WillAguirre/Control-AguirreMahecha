@@ -5,6 +5,16 @@ import plotly.graph_objects as go
 import plotly.express as px
 from scipy import stats
 import base64
+from metricas import Metricas
+import metricas
+import scipy.stats as stats
+import matplotlib.pyplot as plt
+from statsmodels.graphics.gofplots import qqplot
+import os
+from pathlib import Path
+
+
+
 
 # Configuración de la página
 st.set_page_config(
@@ -13,6 +23,12 @@ st.set_page_config(
     layout="wide",
     initial_sidebar_state="expanded"
 )
+
+
+
+
+
+
 
 # CSS personalizado para replicar el estilo original
 st.markdown("""
@@ -112,91 +128,24 @@ st.markdown("""
 </style>
 """, unsafe_allow_html=True)
 
-# Función para generar datos de ejemplo
-@st.cache_data
-def generate_sample_data():
-    np.random.seed(42)
-    return np.random.normal(123.5, 15.2, 100)
 
-# Función para calcular estadísticas de atípicos
-def calcular_atipicos(data):
-    q1 = np.percentile(data, 25)
-    q2 = np.percentile(data, 50)  # mediana
-    q3 = np.percentile(data, 75)
-    q5 = np.percentile(data, 95)
-    iqr = q3 - q1
-    lim_inf = q1 - 1.5 * iqr
-    lim_sup = q3 + 1.5 * iqr
-    atipicos = data[(data < lim_inf) | (data > lim_sup)]
-    
-    return {
-        'n': len(data),
-        'q1': round(q1, 2),
-        'q2': round(q2, 2),
-        'q3': round(q3, 2),
-        'q5': round(q5, 2),
-        'iqr': round(iqr, 2),
-        'lim_inf': round(lim_inf, 2),
-        'lim_sup': round(lim_sup, 2),
-        'cantidad_atipicos': len(atipicos)
-    }
 
-# Función para calcular estadísticas descriptivas
-def calcular_descriptivas(data):
-    return {
-        'n': len(data),
-        'media': round(np.mean(data), 2),
-        'mediana': round(np.median(data), 2),
-        'moda': round(stats.mode(data, keepdims=True)[0][0], 2),
-        'rango': round(np.max(data) - np.min(data), 2),
-        'varianza': round(np.var(data, ddof=1), 2),
-        'desviacion_estandar': round(np.std(data, ddof=1), 2)
-    }
 
-# Función para calcular pruebas de normalidad
-def calcular_normalidad(data):
-    shapiro_stat, shapiro_p = stats.shapiro(data)
-    ks_stat, ks_p = stats.kstest(data, 'norm', args=(np.mean(data), np.std(data)))
-    
-    return {
-        'shapiro_p': round(shapiro_p, 6),
-        'kolmogorov_p': round(ks_p, 6)
-    }
 
-# Función para calcular estadísticas de control
-def calcular_control(data, media_control=120, std_control=10):
-    media_obs = np.mean(data)
-    std_obs = np.std(data, ddof=1)
-    
-    li = media_control - 2 * std_control
-    ls = media_control + 2 * std_control
-    
-    mas2 = media_control + 2 * std_control
-    menos2 = media_control - 2 * std_control
-    
-    fuera_2sigma = len(data[(data < menos2) | (data > mas2)])
-    fuera_control_inf = len(data[data < li])
-    fuera_control_sup = len(data[data > ls])
-    total_fuera_control = fuera_control_inf + fuera_control_sup
-    
-    return {
-        'media_control': media_control,
-        'li': round(li, 2),
-        'ls': round(ls, 2),
-        'media_observada': round(media_obs, 2),
-        'std_observada': round(std_obs, 2),
-        'mas2': round(mas2, 2),
-        'menos2': round(menos2, 2),
-        'fuera_2sigma': fuera_2sigma,
-        'total_fuera_control': total_fuera_control,
-        'fuera_control_inf': fuera_control_inf,
-        'fuera_control_sup': fuera_control_sup
-    }
+
+
+
+
+
+
+
+
+
 
 # Función para mostrar tarjetas de métricas
-def mostrar_tarjetas(metricas, prefijo=""):
+def mostrar_tarjetas(metricas_tarjeta, prefijo=""):
     cols = st.columns(3)
-    items = list(metricas.items())
+    items = list(metricas_tarjeta.items())
     
     for i, (key, value) in enumerate(items):
         with cols[i % 3]:
@@ -207,155 +156,197 @@ def mostrar_tarjetas(metricas, prefijo=""):
             </div>
             """, unsafe_allow_html=True)
 
-# Función para crear gráficos
-def crear_grafico_atipicos(data, stats_atipicos):
-    fig = go.Figure()
-    
-    # Boxplot
-    fig.add_trace(go.Box(
-        y=data,
-        name="Datos",
-        boxpoints="outliers",
-        marker_color="#ff0064"
-    ))
-    
-    fig.update_layout(
-        title="Análisis de Valores Atípicos",
-        yaxis_title="Valores",
-        showlegend=False,
-        height=400
-    )
-    
-    return fig
 
-def crear_grafico_descriptivos(data):
-    fig = go.Figure()
-    
-    # Histograma
-    fig.add_trace(go.Histogram(
-        x=data,
-        nbinsx=20,
-        name="Distribución",
-        marker_color="#ff0064",
-        opacity=0.7
-    ))
-    
-    # Línea de la media
-    fig.add_vline(x=np.mean(data), line_dash="dash", line_color="red", 
-                  annotation_text="Media")
-    
-    fig.update_layout(
-        title="Distribución de Datos",
-        xaxis_title="Valores",
-        yaxis_title="Frecuencia",
-        showlegend=False,
-        height=400
-    )
-    
-    return fig
 
-def crear_grafico_normalidad(data):
-    fig = go.Figure()
-    
-    # Q-Q plot
-    from scipy import stats
-    (osm, osr), (slope, intercept, r) = stats.probplot(data, dist="norm", plot=None)
-    
-    fig.add_trace(go.Scatter(
-        x=osm, 
-        y=osr,
-        mode='markers',
-        name='Datos observados',
-        marker_color="#ff0064"
-    ))
-    
-    fig.add_trace(go.Scatter(
-        x=osm,
-        y=slope * osm + intercept,
-        mode='lines',
-        name='Línea teórica',
-        line=dict(color='red', dash='dash')
-    ))
-    
-    fig.update_layout(
-        title="Q-Q Plot - Prueba de Normalidad",
-        xaxis_title="Cuantiles Teóricos",
-        yaxis_title="Cuantiles Observados",
-        height=400
-    )
-    
-    return fig
 
-def crear_grafico_control(data, stats_control):
-    fig = go.Figure()
-    
-    # Datos
-    fig.add_trace(go.Scatter(
-        x=list(range(len(data))),
-        y=data,
-        mode='lines+markers',
-        name='Datos',
-        line=dict(color='blue'),
-        marker=dict(size=4)
-    ))
-    
-    # Líneas de control
-    fig.add_hline(y=stats_control['media_control'], line_dash="solid", 
-                  line_color="green", annotation_text="Media Control")
-    fig.add_hline(y=stats_control['li'], line_dash="dash", 
-                  line_color="red", annotation_text="LI")
-    fig.add_hline(y=stats_control['ls'], line_dash="dash", 
-                  line_color="red", annotation_text="LS")
-    
-    fig.update_layout(
-        title="Gráfico de Control",
-        xaxis_title="Muestra",
-        yaxis_title="Valores",
-        height=400
-    )
-    
-    return fig
 
-def crear_grafico_incertidumbre(data):
-    media = np.mean(data)
-    std = np.std(data, ddof=1)
-    error_std = std / np.sqrt(len(data))
-    
-    # Intervalo de confianza 95%
-    ci_95 = stats.t.interval(0.95, len(data)-1, loc=media, scale=error_std)
-    
-    fig = go.Figure()
-    
-    # Distribución normal
-    x = np.linspace(media - 4*std, media + 4*std, 100)
-    y = stats.norm.pdf(x, media, std)
-    
-    fig.add_trace(go.Scatter(
-        x=x, y=y,
-        mode='lines',
-        fill='tozeroy',
-        name='Distribución',
-        line=dict(color='#ff0064')
-    ))
-    
-    # Intervalo de confianza
-    fig.add_vrect(
-        x0=ci_95[0], x1=ci_95[1],
-        fillcolor="rgba(255,0,100,0.2)",
-        annotation_text="IC 95%",
-        annotation_position="top left"
-    )
-    
-    fig.update_layout(
-        title="Análisis de Incertidumbre",
-        xaxis_title="Valores",
-        yaxis_title="Densidad",
-        height=400
-    )
-    
-    return fig
 
-# Interfaz principal
+
+
+
+
+
+
+
+
+controles = {
+    'I-M-I':{
+        'microalbumina':{'maximo':59,'minimo':39,'promedio':49},
+        'glucosa':{'maximo':98,'minimo':72,'promedio':85},
+        'colesterol':{'maximo':162,'minimo':120,'promedio':0},
+        'creatinina':{'maximo':1.57,'minimo':1.09,'promedio':1.33},
+        'colesterol hdl':{'maximo':66,'minimo':39,'promedio':52.5},
+        'trigliceridos':{'maximo':70,'minimo':52,'promedio':61},
+        'colesterol ldl':{'maximo':77,'minimo':46,'promedio':62},
+        #inicio de controles patologicos (inferencia)
+        'microalbumina_P':{'maximo':66,'minimo':44,'promedio':55},
+        'glucosa_P':{'maximo':243,'minimo':179,'promedio':211},
+        'colesterol_P':{'maximo':266,'minimo':196,'promedio':231},
+        'creatinina_P':{'maximo':3.74,'minimo':2.6,'promedio':3.17},
+        'colesterol hdl_P':{'maximo':110,'minimo':66,'promedio':88},
+        'trigliceridos_P':{'maximo':144,'minimo':106,'promedio':125},
+        'colesterol ldl_P':{'maximo':143,'minimo':86,'promedio':155},
+    },
+    'I-R':{
+        'colesterol':{'maximo':165,'minimo':138,'promedio':152},
+        'glucosa':{'maximo':120,'minimo':68.2,'promedio':94},
+        'trigliceridos':{'maximo':98.7,'minimo':77.6,'promedio':88.2},
+        'colesterol hdl':{'maximo':98.4,'minimo':74.8,'promedio':86.6},
+        'creatina':{'maximo':1.01,'minimo':0.79,'promedio':0.9},
+        #Inicio de controles patologicos (insertos)
+        'colesterol_P':{'maximo':275,'minimo':207,'promedio':241},
+        'glucosa_P':{'maximo':269,'minimo':195,'promedio':232},
+        'trigliceridos_P':{'maximo':276,'minimo':192,'promedio':234},
+        'colesterol hdl_P':{'maximo':221,'minimo':147,'promedio':184},
+        'creatina_P':{'maximo':5.33,'minimo':3.41,'promedio':4.37},
+    }
+}
+@st.cache_data
+
+def cargar_archivos_excel_automatico():
+    """
+    Carga automáticamente todos los archivos Excel de las carpetas especificadas
+    y los organiza en un diccionario jerárquico para fácil acceso.
+    
+    Returns:
+        dict: Diccionario organizado como {carpeta: {archivo: dataframe}}
+    """
+    
+    # Definir las rutas de las carpetas
+    rutas = {
+        "H_I": "/home/wilson/PROYECTO GRADO/datos/H-I-CORREGIDOS",
+        "I_M_I": "/home/wilson/PROYECTO GRADO/datos/I-M-I CORREGIDOS", 
+        "I_R": "/home/wilson/PROYECTO GRADO/datos/I-R"
+    }
+    
+    # Diccionario principal para almacenar todos los datos
+    datos_organizados = {}
+    
+    # Procesar cada carpeta
+    for nombre_carpeta, ruta_carpeta in rutas.items():
+        print(f"\nProcesando carpeta: {nombre_carpeta}")
+        print(f"Ruta: {ruta_carpeta}")
+        
+        # Verificar si la carpeta existe
+        if not os.path.exists(ruta_carpeta):
+            print(f"⚠️  Advertencia: La carpeta {ruta_carpeta} no existe")
+            datos_organizados[nombre_carpeta] = {}
+            continue
+        
+        # Diccionario para esta carpeta específica
+        archivos_carpeta = {}
+        
+        # Buscar todos los archivos .xlsx en la carpeta
+        archivos_encontrados = list(Path(ruta_carpeta).glob("*.xlsx"))
+        
+        if not archivos_encontrados:
+            print(f"   No se encontraron archivos .xlsx en {nombre_carpeta}")
+        
+        # Cargar cada archivo Excel
+        for archivo_path in archivos_encontrados:
+            try:
+                # Obtener el nombre del archivo sin extensión
+                nombre_archivo = archivo_path.stem
+                
+                #print(f"   📁 Cargando: {nombre_archivo}.xlsx")
+                
+                # Leer el archivo Excel
+                df = pd.read_excel(archivo_path)
+                
+                # Guardar en el diccionario
+                archivos_carpeta[nombre_archivo] = df
+                
+               # print(f"      ✅ Cargado exitosamente - Shape: {df.shape}")
+                
+            except Exception as e:
+                print(f"      ❌ Error al cargar {archivo_path.name}: {str(e)}")
+                continue
+        
+        # Agregar los archivos de esta carpeta al diccionario principal
+        datos_organizados[nombre_carpeta] = archivos_carpeta
+        print(f"   📊 Total archivos cargados en {nombre_carpeta}: {len(archivos_carpeta)}")
+    
+    return datos_organizados
+
+def mostrar_estructura_datos(datos_organizados):
+    """
+    Muestra la estructura completa de los datos cargados
+    """
+    print("\n" + "="*60)
+    print("ESTRUCTURA DE DATOS CARGADOS")
+    print("="*60)
+    
+    for carpeta, archivos in datos_organizados.items():
+        print(f"\n📂 CARPETA: {carpeta}")
+        if not archivos:
+            print("   (Sin archivos)")
+            continue
+            
+        for archivo, df in archivos.items():
+            print(f"   📄 {archivo}")
+            print(f"      - Dimensiones: {df.shape[0]} filas x {df.shape[1]} columnas")
+            print(f"      - Columnas: {list(df.columns[:5])}{'...' if len(df.columns) > 5 else ''}")
+
+def acceder_datos(datos_organizados, carpeta, archivo, columna=None):
+    """
+    Función de acceso fácil a los datos
+    
+    Args:
+        datos_organizados: El diccionario principal
+        carpeta: Nombre de la carpeta ("H_I", "I_M_I", "I_R")
+        archivo: Nombre del archivo (sin extensión)
+        columna: Nombre de la columna (opcional)
+    
+    Returns:
+        DataFrame completo, Series (columna), o None si no existe
+    """
+    try:
+        if carpeta not in datos_organizados:
+            print(f"Carpeta '{carpeta}' no encontrada")
+            return None
+            
+        if archivo not in datos_organizados[carpeta]:
+            print(f"Archivo '{archivo}' no encontrado en carpeta '{carpeta}'")
+            print(f"   Archivos disponibles: {list(datos_organizados[carpeta].keys())}")
+            return None
+        
+        df = datos_organizados[carpeta][archivo]
+        
+        if columna is None:
+            return df
+        else:
+            if columna not in df.columns:
+                print(f"Columna '{columna}' no encontrada")
+                print(f"Columnas disponibles: {list(df.columns)}")
+                return None
+            return df[columna]
+            
+    except Exception as e:
+        print(f"Error al acceder a los datos: {str(e)}")
+        return None
+# Cargar los datos automáticamente
+datos = cargar_archivos_excel_automatico()
+lista_clinicas = list(datos.keys())
+clinica_seleccionada = st.sidebar.selectbox("Selecciona una clínica", lista_clinicas)
+# Acceder a los datos de la clínica seleccionada
+if clinica_seleccionada:
+    archivos_clinica = datos[clinica_seleccionada]
+    lista_archivos = list(archivos_clinica.keys())
+    archivo_seleccionado = st.sidebar.selectbox("Selecciona un archivo", lista_archivos)
+    
+    if archivo_seleccionado:
+        # Acceder al DataFrame del archivo seleccionado
+        data = archivos_clinica[archivo_seleccionado]
+        st.write(f"Datos cargados de : {clinica_seleccionada} - Prueba : {archivo_seleccionado}")
+        st.dataframe(data.head())  # Mostrar las primeras filas del DataFrame
+metricas_clinica = Metricas(
+    datos=datos,
+    archivo=clinica_seleccionada,
+    prueba=archivo_seleccionado,
+    controles=controles,
+    archivo_control='I-R',
+    prueba_control=archivo_seleccionado)
+
 def main():
     # Header
     st.markdown("""
@@ -364,65 +355,82 @@ def main():
     </div>
     """, unsafe_allow_html=True)
     
-    # Generar datos de ejemplo
-    data = generate_sample_data()
-
-    
     # Tabs principales
     tab1, tab2, tab3, tab4, tab5 = st.tabs(["ATÍPICOS", "DESCRIPTIVOS", "NORMALIDAD", "CONTROL", "INCERTIDUMBRE"])
     
     with tab1:
         st.markdown('<h2 class="section-header">Análisis de Valores Atípicos</h2>', unsafe_allow_html=True)
-        
-        
-        stats_atipicos = calcular_atipicos(data)
-        fig = crear_grafico_atipicos(data, stats_atipicos)
-        st.plotly_chart(fig, use_container_width=True)
-        
+        fig1, n, cuartil_1, cuartil_2, cuartil_3,  Rango_Intercuantilico, lim_inf, lim_sup, cantidad_atipicos = metricas_clinica.Calculo_Atipicos()
+        st.plotly_chart(fig1, use_container_width=True,key="atipicos_plot")
         st.markdown('<h3 class="section-header">Estadísticas</h3>', unsafe_allow_html=True)
-        mostrar_tarjetas(stats_atipicos)
-    
+        mostrar_tarjetas({
+            'Cantidad de Valores': n,
+            'Cuartil 1': cuartil_1,
+            'Cuartil 2': cuartil_2,
+            'Cuartil 3': cuartil_3,
+            'Rango Intercuartílico': Rango_Intercuantilico,
+            'Límite Inferior': lim_inf,
+            'Límite Superior': lim_sup,
+            'Cantidad de Atípicos': cantidad_atipicos
+        })
+
     with tab2:
         st.markdown('<h2 class="section-header">Estadísticas Descriptivas</h2>', unsafe_allow_html=True)
-        fig = crear_grafico_descriptivos(data)
-        st.plotly_chart(fig, use_container_width=True)
+        fig2, n, media, mediana, moda, rango, varianza, desviacion_estandar = metricas_clinica.Calculo_Descriptivas()
+        st.plotly_chart(fig2, use_container_width=True, key="descriptivas_plot")
         st.markdown('<h3 class="section-header">Estadísticas</h3>', unsafe_allow_html=True)
-        stats_descriptivas = calcular_descriptivas(data)
-        mostrar_tarjetas(stats_descriptivas)
-    
+        mostrar_tarjetas({
+            'Cantidad de Valores': n,
+            'Media': media,
+            'Mediana': mediana,
+            'Moda': moda,
+            'Rango': rango,
+            'Varianza': varianza,
+            'Desviación Estándar': desviacion_estandar
+        })
+
     with tab3:
         st.markdown('<h2 class="section-header">Pruebas de Normalidad</h2>', unsafe_allow_html=True)
-        fig = crear_grafico_normalidad(data)
-        st.plotly_chart(fig, use_container_width=True) 
+        fig3, shapiro_p, kolmogorov_p = metricas_clinica.Calculo_Normalidad()
+        st.plotly_chart(fig3, use_container_width=True, key="normalidad_plot") 
         st.markdown('<h3 class="section-header">Pruebas Estadísticas</h3>', unsafe_allow_html=True)
-        stats_normalidad = calcular_normalidad(data)
-        mostrar_tarjetas(stats_normalidad)
-    
+        mostrar_tarjetas({
+            'Shapiro-Wilk p-value': shapiro_p,
+            'Kolmogorov-Smirnov p-value': kolmogorov_p
+        })
+
+
     with tab4:
         st.markdown('<h2 class="section-header">Análisis de Control</h2>', unsafe_allow_html=True)
-        stats_control = calcular_control(data)
-        fig = crear_grafico_control(data, stats_control)
-        st.plotly_chart(fig, use_container_width=True)
+        fig4, media_control, li, ls, media_obs, std_obs, mas2, menos2, fuera_2sigma, total_fuera, fuera_inf, fuera_sup = metricas_clinica.Calculos_Control()
+        st.plotly_chart(fig4, use_container_width=True, key="control_plot")
         st.markdown('<h3 class="section-header">Estadísticas de Control</h3>', unsafe_allow_html=True)
-        mostrar_tarjetas(stats_control)
+        mostrar_tarjetas({
+            'Media Control': media_control,
+            'Límite Inferior': li,
+            'Límite Superior': ls,
+            'Media Observada': media_obs,
+            'Desviación Estándar Observada': std_obs,
+            '+2σ': mas2,
+            '−2σ': menos2,
+            '±2σ': fuera_2sigma,
+            'Total Fuera de Control': total_fuera,
+            'Fuera límite Inferior': fuera_inf,
+            'Fuera límite Superior': fuera_sup
+        })
+
+
     with tab5:
         st.markdown('<h2 class="section-header">Análisis de Incertidumbre</h2>', unsafe_allow_html=True)
-        fig = crear_grafico_incertidumbre(data)
-        st.plotly_chart(fig, use_container_width=True)
+        fig5, media_observada, std_observada, error_estandar = metricas_clinica.Calculos_Incertidumbre()
+        st.plotly_chart(fig5, use_container_width=True, key="incertidumbre_plot")
         st.markdown('<h3 class="section-header">Estadísticas de Incertidumbre</h3>', unsafe_allow_html=True)
-        # Cálculos de incertidumbre
-        media = np.mean(data)
-        std = np.std(data, ddof=1)
-        error_std = std / np.sqrt(len(data))
-        ci_95 = stats.t.interval(0.95, len(data)-1, loc=media, scale=error_std)
-        
-        stats_incertidumbre = {
-            'error_estandar': round(error_std, 2),
-            'intervalo_confianza_95': f"({ci_95[0]:.1f}, {ci_95[1]:.1f})",
-            'coeficiente_variacion': round((std/media)*100, 2)
-        }
-        
-        mostrar_tarjetas(stats_incertidumbre)
+        mostrar_tarjetas({
+            'Media Observada': media_observada,
+            'Desviación Estándar Observada': std_observada,
+            'Error Estándar': error_estandar
+        })
+
 
 if __name__ == "__main__":
     main()
