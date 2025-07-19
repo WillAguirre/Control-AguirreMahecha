@@ -13,7 +13,7 @@ from statsmodels.graphics.gofplots import qqplot
 import os
 from pathlib import Path
 
-
+os.environ["STREAMLIT_WATCHDOG_MODE"] = "poll"
 
 
 # Configuración de la página
