@@ -214,9 +214,9 @@ def cargar_archivos_excel_automatico():
     
     # Definir las rutas de las carpetas
     rutas = {
-        "H_I": "/home/wilson/PROYECTO GRADO/datos/H-I-CORREGIDOS",
-        "I_M_I": "/home/wilson/PROYECTO GRADO/datos/I-M-I CORREGIDOS", 
-        "I_R": "/home/wilson/PROYECTO GRADO/datos/I-R"
+        "H_I": "/datos/H-I-CORREGIDOS",
+        "I_M_I": "/datos/I-M-I CORREGIDOS", 
+        "I_R": "/datos/I-R"
     }
     
     # Diccionario principal para almacenar todos los datos
