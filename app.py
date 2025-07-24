@@ -13,7 +13,7 @@ from statsmodels.graphics.gofplots import qqplot
 import os
 from pathlib import Path
 
-os.environ["STREAMLIT_WATCHDOG_MODE"] = "poll"
+
 
 
 # Configuración de la página
@@ -214,9 +214,9 @@ def cargar_archivos_excel_automatico():
     
     # Definir las rutas de las carpetas
     rutas = {
-        "H_I": "datos/H-I-CORREGIDOS",
-        "I_M_I": "datos/I-M-I CORREGIDOS", 
-        "I_R": "datos/I-R"
+        "H_I": "/home/wilson/PROYECTO GRADO/datos/H-I-CORREGIDOS",
+        "I_M_I": "/home/wilson/PROYECTO GRADO/datos/I-M-I CORREGIDOS", 
+        "I_R": "/home/wilson/PROYECTO GRADO/datos/I-R"
     }
     
     # Diccionario principal para almacenar todos los datos
@@ -327,12 +327,12 @@ def acceder_datos(datos_organizados, carpeta, archivo, columna=None):
 # Cargar los datos automáticamente
 datos = cargar_archivos_excel_automatico()
 lista_clinicas = list(datos.keys())
-clinica_seleccionada = st.sidebar.selectbox("Selecciona una clínica", lista_clinicas,index=0)
+clinica_seleccionada = st.sidebar.selectbox("Selecciona una clínica", lista_clinicas)
 # Acceder a los datos de la clínica seleccionada
 if clinica_seleccionada:
     archivos_clinica = datos[clinica_seleccionada]
     lista_archivos = list(archivos_clinica.keys())
-    archivo_seleccionado = st.sidebar.selectbox("Selecciona un archivo", lista_archivos,index=0)
+    archivo_seleccionado = st.sidebar.selectbox("Selecciona un archivo", lista_archivos)
     
     if archivo_seleccionado:
         # Acceder al DataFrame del archivo seleccionado
@@ -342,10 +342,8 @@ if clinica_seleccionada:
 metricas_clinica = Metricas(
     datos=datos,
     archivo=clinica_seleccionada,
-    prueba=archivo_seleccionado,
-    controles=controles,
-    archivo_control='I-R',
-    prueba_control=archivo_seleccionado)
+    prueba=archivo_seleccionado
+)
 
 def main():
     # Header
