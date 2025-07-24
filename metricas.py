@@ -124,7 +124,7 @@ def mostrar_estructura_datos(datos_organizados):
             print(f"      - Dimensiones: {df.shape[0]} filas x {df.shape[1]} columnas")
             print(f"      - Columnas: {list(df.columns[:5])}{'...' if len(df.columns) > 5 else ''}")
 
-def acceder_datos(datos_organizados, carpeta, archivo, columna=None):
+def acceder_datos(datos_organizados, carpeta, archivo, columna='resultado'):
     """
     Función de acceso fácil a los datos
     
