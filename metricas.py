@@ -179,9 +179,36 @@ class Metricas:
         self.prueba_control = prueba_control
         self.columna_control = columna_control
 
-
     def _acceso_directo(self, datos, archivo, prueba, columna):
-        return datos[archivo][prueba][columna]
+        """
+        Función corregida para acceder a los datos usando la estructura correcta
+        """
+        try:
+            # Verificar que la carpeta existe
+            if archivo not in datos:
+                raise KeyError(f"Carpeta '{archivo}' no encontrada en los datos")
+            
+            # Verificar que el archivo existe en la carpeta
+            if prueba not in datos[archivo]:
+                raise KeyError(f"Archivo '{prueba}' no encontrado en carpeta '{archivo}'")
+            
+            # Obtener el DataFrame
+            df = datos[archivo][prueba]
+            
+            # Verificar que la columna existe
+            if columna not in df.columns:
+                raise KeyError(f"Columna '{columna}' no encontrada en el archivo")
+            
+            return df[columna]
+            
+        except Exception as e:
+            print(f"Error en _acceso_directo: {e}")
+            print(f"Carpetas disponibles: {list(datos.keys())}")
+            if archivo in datos:
+                print(f"Archivos en '{archivo}': {list(datos[archivo].keys())}")
+                if prueba in datos[archivo]:
+                    print(f"Columnas en '{prueba}': {list(datos[archivo][prueba].columns)}")
+            raise
 
     def obtener_columna(self):
         return self.acceder_func(self.datos, self.archivo, self.prueba, self.columna)
