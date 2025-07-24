@@ -358,13 +358,13 @@ class Metricas:
         controles_ir = {
             'colesterol': {'maximo': 165, 'minimo': 138, 'promedio': 152},
             'glucosa': {'maximo': 120, 'minimo': 68.2, 'promedio': 94},
-            'trigliceridos': {'maximo': 98.7, 'minimo': 77.6, 'promedio': 88.2},
+            'triglicerido': {'maximo': 98.7, 'minimo': 77.6, 'promedio': 88.2},
             'colesterol hdl': {'maximo': 98.4, 'minimo': 74.8, 'promedio': 86.6},
             'creatina': {'maximo': 1.01, 'minimo': 0.79, 'promedio': 0.9},
             # Controles patológicos
             'colesterol patologico': {'maximo': 275, 'minimo': 207, 'promedio': 241},
             'glucosa patologico': {'maximo': 269, 'minimo': 195, 'promedio': 232},
-            'trigliceridos patologico': {'maximo': 276, 'minimo': 192, 'promedio': 234},
+            'triglicerido patologico': {'maximo': 276, 'minimo': 192, 'promedio': 234},
             'colesterol hdl patologico': {'maximo': 221, 'minimo': 147, 'promedio': 184},
             'creatina patologico': {'maximo': 5.33, 'minimo': 3.41, 'promedio': 4.37}
         }
