@@ -1,3 +1,4 @@
+
 import streamlit as st
 import pandas as pd
 import numpy as np
@@ -13,9 +14,6 @@ from statsmodels.graphics.gofplots import qqplot
 import os
 from pathlib import Path
 
-
-
-
 # Configuración de la página
 st.set_page_config(
     page_title="Análisis Datos Clínicos",
@@ -23,12 +21,6 @@ st.set_page_config(
     layout="wide",
     initial_sidebar_state="expanded"
 )
-
-
-
-
-
-
 
 # CSS personalizado para replicar el estilo original
 st.markdown("""
@@ -128,20 +120,6 @@ st.markdown("""
 </style>
 """, unsafe_allow_html=True)
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 # Función para mostrar tarjetas de métricas
 def mostrar_tarjetas(metricas_tarjeta, prefijo=""):
     cols = st.columns(3)
@@ -149,25 +127,21 @@ def mostrar_tarjetas(metricas_tarjeta, prefijo=""):
     
     for i, (key, value) in enumerate(items):
         with cols[i % 3]:
+            # Formatear el valor si es numérico
+            if isinstance(value, (int, float)):
+                if value is None:
+                    formatted_value = "N/A"
+                else:
+                    formatted_value = f"{value:.4f}" if isinstance(value, float) else str(value)
+            else:
+                formatted_value = str(value) if value is not None else "N/A"
+            
             st.markdown(f"""
             <div class="metric-card">
                 <div class="metric-header">{key.replace('_', ' ').title()}</div>
-                <div class="metric-value">{value}</div>
+                <div class="metric-value">{formatted_value}</div>
             </div>
             """, unsafe_allow_html=True)
-
-
-
-
-
-
-
-
-
-
-
-
-
 
 controles = {
     'I-M-I':{
@@ -201,8 +175,8 @@ controles = {
         'creatina_P':{'maximo':5.33,'minimo':3.41,'promedio':4.37},
     }
 }
-@st.cache_data
 
+@st.cache_data
 def cargar_archivos_excel_automatico():
     """
     Carga automáticamente todos los archivos Excel de las carpetas especificadas
@@ -248,15 +222,11 @@ def cargar_archivos_excel_automatico():
                 # Obtener el nombre del archivo sin extensión
                 nombre_archivo = archivo_path.stem
                 
-                #print(f"   📁 Cargando: {nombre_archivo}.xlsx")
-                
                 # Leer el archivo Excel
                 df = pd.read_excel(archivo_path)
                 
                 # Guardar en el diccionario
                 archivos_carpeta[nombre_archivo] = df
-                
-               # print(f"      ✅ Cargado exitosamente - Shape: {df.shape}")
                 
             except Exception as e:
                 print(f"      ❌ Error al cargar {archivo_path.name}: {str(e)}")
@@ -268,37 +238,9 @@ def cargar_archivos_excel_automatico():
     
     return datos_organizados
 
-def mostrar_estructura_datos(datos_organizados):
-    """
-    Muestra la estructura completa de los datos cargados
-    """
-    print("\n" + "="*60)
-    print("ESTRUCTURA DE DATOS CARGADOS")
-    print("="*60)
-    
-    for carpeta, archivos in datos_organizados.items():
-        print(f"\n📂 CARPETA: {carpeta}")
-        if not archivos:
-            print("   (Sin archivos)")
-            continue
-            
-        for archivo, df in archivos.items():
-            print(f"   📄 {archivo}")
-            print(f"      - Dimensiones: {df.shape[0]} filas x {df.shape[1]} columnas")
-            print(f"      - Columnas: {list(df.columns[:5])}{'...' if len(df.columns) > 5 else ''}")
-
 def acceder_datos(datos_organizados, carpeta, archivo, columna=None):
     """
-    Función de acceso fácil a los datos
-    
-    Args:
-        datos_organizados: El diccionario principal
-        carpeta: Nombre de la carpeta ("H_I", "I_M_I", "I_R")
-        archivo: Nombre del archivo (sin extensión)
-        columna: Nombre de la columna (opcional)
-    
-    Returns:
-        DataFrame completo, Series (columna), o None si no existe
+    Función de acceso fácil a los datos compatible con la clase Metricas
     """
     try:
         if carpeta not in datos_organizados:
@@ -324,26 +266,9 @@ def acceder_datos(datos_organizados, carpeta, archivo, columna=None):
     except Exception as e:
         print(f"Error al acceder a los datos: {str(e)}")
         return None
+
 # Cargar los datos automáticamente
 datos = cargar_archivos_excel_automatico()
-lista_clinicas = list(datos.keys())
-clinica_seleccionada = st.sidebar.selectbox("Selecciona una clínica", lista_clinicas)
-# Acceder a los datos de la clínica seleccionada
-if clinica_seleccionada:
-    archivos_clinica = datos[clinica_seleccionada]
-    lista_archivos = list(archivos_clinica.keys())
-    archivo_seleccionado = st.sidebar.selectbox("Selecciona un archivo", lista_archivos)
-    
-    if archivo_seleccionado:
-        # Acceder al DataFrame del archivo seleccionado
-        data = archivos_clinica[archivo_seleccionado]
-        st.write(f"Datos cargados de : {clinica_seleccionada} - Prueba : {archivo_seleccionado}")
-        st.dataframe(data.head())  # Mostrar las primeras filas del DataFrame
-metricas_clinica = Metricas(
-    datos=datos,
-    archivo=clinica_seleccionada,
-    prueba=archivo_seleccionado
-)
 
 def main():
     # Header
@@ -353,82 +278,165 @@ def main():
     </div>
     """, unsafe_allow_html=True)
     
+    # Sidebar para selección
+    st.sidebar.markdown("### Selección de Datos")
+    
+    if not datos:
+        st.error("No se pudieron cargar los datos. Verifica que las carpetas existan.")
+        return
+    
+    lista_clinicas = list(datos.keys())
+    clinica_seleccionada = st.sidebar.selectbox("Selecciona una clínica", lista_clinicas)
+    
+    if not clinica_seleccionada or clinica_seleccionada not in datos:
+        st.warning("Por favor selecciona una clínica válida.")
+        return
+    
+    archivos_clinica = datos[clinica_seleccionada]
+    if not archivos_clinica:
+        st.warning(f"No hay archivos disponibles para la clínica {clinica_seleccionada}")
+        return
+    
+    lista_archivos = list(archivos_clinica.keys())
+    archivo_seleccionado = st.sidebar.selectbox("Selecciona un archivo", lista_archivos)
+    
+    if not archivo_seleccionado or archivo_seleccionado not in archivos_clinica:
+        st.warning("Por favor selecciona un archivo válido.")
+        return
+    
+    # Obtener el DataFrame seleccionado
+    data = archivos_clinica[archivo_seleccionado]
+    
+    # Mostrar información básica
+    st.info(f"**Clínica:** {clinica_seleccionada} | **Prueba:** {archivo_seleccionado}")
+    
+    # Verificar que el DataFrame tenga la columna 'resultado'
+    if 'resultado' not in data.columns:
+        st.error(f"El archivo seleccionado no tiene una columna 'resultado'. Columnas disponibles: {list(data.columns)}")
+        return
+    
+    # Mostrar preview de los datos
+    with st.expander("Vista previa de los datos"):
+        st.dataframe(data.head())
+        st.write(f"**Dimensiones:** {data.shape[0]} filas × {data.shape[1]} columnas")
+    
+    # Crear instancia de Metricas con la función de acceso correcta
+    try:
+        metricas_clinica = Metricas(
+            datos=datos,
+            archivo=clinica_seleccionada,
+            prueba=archivo_seleccionado,
+            columna="resultado",
+            acceder_func=acceder_datos,
+            controles=controles,
+            archivo_control='I-R',
+            prueba_control=archivo_seleccionado.lower()
+        )
+    except Exception as e:
+        st.error(f"Error al crear la instancia de Metricas: {str(e)}")
+        return
+    
     # Tabs principales
-    tab1, tab2, tab3, tab4, tab5 = st.tabs(["ATÍPICOS", "DESCRIPTIVOS", "NORMALIDAD", "CONTROL", "INCERTIDUMBRE"])
+    tab1, tab2, tab3, tab4, tab5 = st.tabs(["🔍 ATÍPICOS", "📊 DESCRIPTIVOS", "📈 NORMALIDAD", "🎯 CONTROL", "⚡ INCERTIDUMBRE"])
     
     with tab1:
         st.markdown('<h2 class="section-header">Análisis de Valores Atípicos</h2>', unsafe_allow_html=True)
-        fig1, n, cuartil_1, cuartil_2, cuartil_3,  Rango_Intercuantilico, lim_inf, lim_sup, cantidad_atipicos = metricas_clinica.Calculo_Atipicos()
-        st.plotly_chart(fig1, use_container_width=True,key="atipicos_plot")
-        st.markdown('<h3 class="section-header">Estadísticas</h3>', unsafe_allow_html=True)
-        mostrar_tarjetas({
-            'Cantidad de Valores': n,
-            'Cuartil 1': cuartil_1,
-            'Cuartil 2': cuartil_2,
-            'Cuartil 3': cuartil_3,
-            'Rango Intercuartílico': Rango_Intercuantilico,
-            'Límite Inferior': lim_inf,
-            'Límite Superior': lim_sup,
-            'Cantidad de Atípicos': cantidad_atipicos
-        })
+        try:
+            fig1, n, cuartil_1, cuartil_2, cuartil_3, Rango_Intercuantilico, lim_inf, lim_sup, cantidad_atipicos = metricas_clinica.Calculo_Atipicos()
+            st.plotly_chart(fig1, use_container_width=True, key="atipicos_plot")
+            st.markdown('<h3 class="section-header">Estadísticas</h3>', unsafe_allow_html=True)
+            mostrar_tarjetas({
+                'Cantidad de Valores': n,
+                'Cuartil 1': cuartil_1,
+                'Cuartil 2': cuartil_2,
+                'Cuartil 3': cuartil_3,
+                'Rango Intercuartílico': Rango_Intercuantilico,
+                'Límite Inferior': lim_inf,
+                'Límite Superior': lim_sup,
+                'Cantidad de Atípicos': cantidad_atipicos
+            })
+        except Exception as e:
+            st.error(f"Error en el análisis de atípicos: {str(e)}")
 
     with tab2:
         st.markdown('<h2 class="section-header">Estadísticas Descriptivas</h2>', unsafe_allow_html=True)
-        fig2, n, media, mediana, moda, rango, varianza, desviacion_estandar = metricas_clinica.Calculo_Descriptivas()
-        st.plotly_chart(fig2, use_container_width=True, key="descriptivas_plot")
-        st.markdown('<h3 class="section-header">Estadísticas</h3>', unsafe_allow_html=True)
-        mostrar_tarjetas({
-            'Cantidad de Valores': n,
-            'Media': media,
-            'Mediana': mediana,
-            'Moda': moda,
-            'Rango': rango,
-            'Varianza': varianza,
-            'Desviación Estándar': desviacion_estandar
-        })
+        try:
+            fig2, n, media, mediana, moda, rango, varianza, desviacion_estandar = metricas_clinica.Calculo_Descriptivas()
+            st.plotly_chart(fig2, use_container_width=True, key="descriptivas_plot")
+            st.markdown('<h3 class="section-header">Estadísticas</h3>', unsafe_allow_html=True)
+            mostrar_tarjetas({
+                'Cantidad de Valores': n,
+                'Media': media,
+                'Mediana': mediana,
+                'Moda': moda,
+                'Rango': rango,
+                'Varianza': varianza,
+                'Desviación Estándar': desviacion_estandar
+            })
+        except Exception as e:
+            st.error(f"Error en el análisis descriptivo: {str(e)}")
 
     with tab3:
         st.markdown('<h2 class="section-header">Pruebas de Normalidad</h2>', unsafe_allow_html=True)
-        fig3, shapiro_p, kolmogorov_p = metricas_clinica.Calculo_Normalidad()
-        st.plotly_chart(fig3, use_container_width=True, key="normalidad_plot") 
-        st.markdown('<h3 class="section-header">Pruebas Estadísticas</h3>', unsafe_allow_html=True)
-        mostrar_tarjetas({
-            'Shapiro-Wilk p-value': shapiro_p,
-            'Kolmogorov-Smirnov p-value': kolmogorov_p
-        })
-
+        try:
+            fig3, shapiro_p, kolmogorov_p = metricas_clinica.Calculo_Normalidad()
+            st.plotly_chart(fig3, use_container_width=True, key="normalidad_plot") 
+            st.markdown('<h3 class="section-header">Pruebas Estadísticas</h3>', unsafe_allow_html=True)
+            mostrar_tarjetas({
+                'Shapiro-Wilk p-value': shapiro_p,
+                'Kolmogorov-Smirnov p-value': kolmogorov_p
+            })
+            
+            # Interpretación de los resultados
+            st.markdown("#### Interpretación:")
+            alpha = 0.05
+            if shapiro_p > alpha:
+                st.success(f"Shapiro-Wilk: Los datos parecen seguir una distribución normal (p = {shapiro_p:.4f} > 0.05)")
+            else:
+                st.warning(f"Shapiro-Wilk: Los datos NO parecen seguir una distribución normal (p = {shapiro_p:.4f} ≤ 0.05)")
+            
+            if kolmogorov_p > alpha:
+                st.success(f"Kolmogorov-Smirnov: Los datos parecen seguir una distribución normal (p = {kolmogorov_p:.4f} > 0.05)")
+            else:
+                st.warning(f"Kolmogorov-Smirnov: Los datos NO parecen seguir una distribución normal (p = {kolmogorov_p:.4f} ≤ 0.05)")
+        except Exception as e:
+            st.error(f"Error en el análisis de normalidad: {str(e)}")
 
     with tab4:
         st.markdown('<h2 class="section-header">Análisis de Control</h2>', unsafe_allow_html=True)
-        fig4, media_control, li, ls, media_obs, std_obs, mas2, menos2, fuera_2sigma, total_fuera, fuera_inf, fuera_sup = metricas_clinica.Calculos_Control()
-        st.plotly_chart(fig4, use_container_width=True, key="control_plot")
-        st.markdown('<h3 class="section-header">Estadísticas de Control</h3>', unsafe_allow_html=True)
-        mostrar_tarjetas({
-            'Media Control': media_control,
-            'Límite Inferior': li,
-            'Límite Superior': ls,
-            'Media Observada': media_obs,
-            'Desviación Estándar Observada': std_obs,
-            '+2σ': mas2,
-            '−2σ': menos2,
-            '±2σ': fuera_2sigma,
-            'Total Fuera de Control': total_fuera,
-            'Fuera límite Inferior': fuera_inf,
-            'Fuera límite Superior': fuera_sup
-        })
-
+        try:
+            fig4, media_control, li, ls, media_obs, std_obs, mas2, menos2, fuera_2sigma, total_fuera, fuera_inf, fuera_sup = metricas_clinica.Calculos_Control()
+            st.plotly_chart(fig4, use_container_width=True, key="control_plot")
+            st.markdown('<h3 class="section-header">Estadísticas de Control</h3>', unsafe_allow_html=True)
+            mostrar_tarjetas({
+                'Media Control': media_control,
+                'Límite Inferior': li,
+                'Límite Superior': ls,
+                'Media Observada': media_obs,
+                'Desviación Estándar Observada': std_obs,
+                '+2σ': mas2,
+                '−2σ': menos2,
+                'Fuera de ±2σ': fuera_2sigma,
+                'Total Fuera de Control': total_fuera,
+                'Fuera límite Inferior': fuera_inf,
+                'Fuera límite Superior': fuera_sup
+            })
+        except Exception as e:
+            st.error(f"Error en el análisis de control: {str(e)}")
 
     with tab5:
         st.markdown('<h2 class="section-header">Análisis de Incertidumbre</h2>', unsafe_allow_html=True)
-        fig5, media_observada, std_observada, error_estandar = metricas_clinica.Calculos_Incertidumbre()
-        st.plotly_chart(fig5, use_container_width=True, key="incertidumbre_plot")
-        st.markdown('<h3 class="section-header">Estadísticas de Incertidumbre</h3>', unsafe_allow_html=True)
-        mostrar_tarjetas({
-            'Media Observada': media_observada,
-            'Desviación Estándar Observada': std_observada,
-            'Error Estándar': error_estandar
-        })
-
+        try:
+            fig5, media_observada, std_observada, error_estandar = metricas_clinica.Calculos_Incertidumbre()
+            st.plotly_chart(fig5, use_container_width=True, key="incertidumbre_plot")
+            st.markdown('<h3 class="section-header">Estadísticas de Incertidumbre</h3>', unsafe_allow_html=True)
+            mostrar_tarjetas({
+                'Media Observada': media_observada,
+                'Desviación Estándar Observada': std_observada,
+                'Error Estándar': error_estandar
+            })
+        except Exception as e:
+            st.error(f"Error en el análisis de incertidumbre: {str(e)}")
 
 if __name__ == "__main__":
     main()
