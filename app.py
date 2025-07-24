@@ -342,7 +342,8 @@ if clinica_seleccionada:
 metricas_clinica = Metricas(
     datos=datos,
     archivo=clinica_seleccionada,
-    prueba=archivo_seleccionado
+    prueba=archivo_seleccionado,
+    columna='resultado'
 )
 
 def main():
