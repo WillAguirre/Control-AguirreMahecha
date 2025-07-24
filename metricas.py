@@ -1,3 +1,4 @@
+#cargamos las librerias necesarias para todo el proyecto 
 import numpy as np
 import pandas as pd
 import plotly.express as px
@@ -7,7 +8,6 @@ import matplotlib.pyplot as plt
 from statsmodels.graphics.gofplots import qqplot
 import os
 from pathlib import Path
-
 controles = {
     'I-M-I':{
         'microalbumina':{'maximo':59,'minimo':39,'promedio':49},
@@ -40,7 +40,6 @@ controles = {
         'creatina_P':{'maximo':5.33,'minimo':3.41,'promedio':4.37},
     }
 }
-
 def cargar_archivos_excel_automatico():
     """
     Carga automáticamente todos los archivos Excel de las carpetas especificadas
@@ -86,11 +85,15 @@ def cargar_archivos_excel_automatico():
                 # Obtener el nombre del archivo sin extensión
                 nombre_archivo = archivo_path.stem
                 
+                #print(f"   📁 Cargando: {nombre_archivo}.xlsx")
+                
                 # Leer el archivo Excel
                 df = pd.read_excel(archivo_path)
                 
                 # Guardar en el diccionario
                 archivos_carpeta[nombre_archivo] = df
+                
+               # print(f"      ✅ Cargado exitosamente - Shape: {df.shape}")
                 
             except Exception as e:
                 print(f"      ❌ Error al cargar {archivo_path.name}: {str(e)}")
@@ -160,12 +163,12 @@ def acceder_datos(datos_organizados, carpeta, archivo, columna=None):
         return None
     
 
+
 class Metricas:
     """Se calculan las diferentes métricas para cada una de las pruebas de laboratorio."""
     
     def __init__(self, datos, archivo, prueba, columna="resultado", acceder_func=None,
-                 controles=None, archivo_control=None, prueba_control=None, columna_control="resultado",
-                 filtros=None):  # *** NUEVO PARÁMETRO ***
+                 controles=None, archivo_control=None, prueba_control=None, columna_control="resultado"):
         self.datos = datos  # conjunto completo de datos
         self.archivo = archivo  # por ejemplo 'H_I'
         self.prueba = prueba  # por ejemplo 'colesterol total'
@@ -175,47 +178,25 @@ class Metricas:
         self.archivo_control = archivo_control
         self.prueba_control = prueba_control
         self.columna_control = columna_control
-        self.filtros = filtros or {}  # *** NUEVO: Diccionario de filtros ***
+
 
     def _acceso_directo(self, datos, archivo, prueba, columna):
         return datos[archivo][prueba][columna]
 
-    def aplicar_filtros(self, df):
-        """*** NUEVO MÉTODO: Aplica todos los filtros definidos al DataFrame ***"""
-        datos_filtrados = df.copy()
-        
-        for columna_filtro, valor_filtro in self.filtros.items():
-            if valor_filtro and columna_filtro in datos_filtrados.columns:
-                datos_filtrados = datos_filtrados[datos_filtrados[columna_filtro] == valor_filtro]
-        
-        return datos_filtrados
-
     def obtener_columna(self):
-        """*** MÉTODO MODIFICADO: Ahora aplica filtros antes de retornar los datos ***"""
-        # Obtener el DataFrame completo
-        datos_base = self.datos[self.archivo][self.prueba]
-        
-        # Aplicar filtros si existen
-        datos_filtrados = self.aplicar_filtros(datos_base)
-        
-        # Retornar la columna específica
-        return datos_filtrados[self.columna]
+        return self.acceder_func(self.datos, self.archivo, self.prueba, self.columna)
 
     def obtener_columna_control(self):
         if self.controles is not None and self.archivo_control is not None and self.prueba_control is not None:
             # Si se especifican controles, archivo_control y prueba_control, usar esos datos
-            datos_base = self.datos[self.archivo_control][self.prueba_control]
-            datos_filtrados = self.aplicar_filtros(datos_base)
-            return datos_filtrados[self.columna_control]
+            return self.acceder_func(self.datos, self.archivo_control, self.prueba_control, self.columna_control)
         elif all(v is not None for v in [self.archivo_control, self.prueba_control]):
             # Si solo se especifican archivo_control y prueba_control sin diccionario de controles
-            datos_base = self.datos[self.archivo_control][self.prueba_control]
-            datos_filtrados = self.aplicar_filtros(datos_base)
-            return datos_filtrados[self.columna_control]
+            return self.acceder_func(self.datos, self.archivo_control, self.prueba_control, self.columna_control)
         return None
 
     def Calculo_Atipicos(self):
-        # *** SIN CAMBIOS: El método usa obtener_columna() que ya aplica filtros ***
+        # Usando la nueva estructura de acceso a datos
         datos_columna = self.obtener_columna()
         
         n = len(datos_columna)
@@ -246,15 +227,15 @@ class Metricas:
                 showgrid=False,
                 zeroline=False
             ))
-        return fig, n, q1, q2, q3, iqr, lim_inf, lim_sup, cantidad_atipicos
+        return fig, n, q1, q2, q3,iqr, lim_inf, lim_sup, cantidad_atipicos
     
     def Calculo_Descriptivas(self):
-        # *** SIN CAMBIOS: El método usa obtener_columna() que ya aplica filtros ***
+        # Usando la nueva estructura de acceso a datos
         datos_columna = self.obtener_columna()
         n = len(datos_columna)
         media = datos_columna.mean()
         mediana = datos_columna.median()
-        moda = datos_columna.mode()[0] if len(datos_columna.mode()) > 0 else datos_columna.iloc[0]
+        moda = datos_columna.mode()[0]
         rango = datos_columna.max() - datos_columna.min()
         varianza = datos_columna.var()
         desviacion_estandar = datos_columna.std()
@@ -275,18 +256,12 @@ class Metricas:
                 showgrid=True,
                 zeroline=False
             ))
-        fig.add_vline(x=media, line_dash="dash", line_color="red", annotation_text="Media", 
-                     annotation_position="top", line_width=3, annotation_bgcolor="red", 
-                     annotation_font_color="white", annotation_font_size=15) 
+        fig.add_vline(x=media, line_dash="dash", line_color="red", annotation_text="Media", annotation_position="top",line_width=3,annotation_bgcolor="red",annotation_font_color="white",annotation_font_size=15) 
         return fig, n, media, mediana, moda, rango, varianza, desviacion_estandar
 
     def Calculo_Normalidad(self):
-        # *** SIN CAMBIOS: El método usa obtener_columna() que ya aplica filtros ***
+        # Usando la nueva estructura de acceso a datos
         datos = self.obtener_columna()
-        
-        # Verificar que tengamos suficientes datos para las pruebas
-        if len(datos) < 3:
-            raise ValueError("No hay suficientes datos para realizar las pruebas de normalidad")
         
         shapiro_stat, shapiro_p = stats.shapiro(datos)
 
@@ -342,14 +317,9 @@ class Metricas:
         return fig, shapiro_p, kolmogorov_p
 
     def Calculos_Control(self):
-        # *** SIN CAMBIOS: El método usa obtener_columna() que ya aplica filtros ***
         # Obtener los datos observados
         y = self.obtener_columna()
         x = list(range(len(y)))
-        
-        # Verificar que tengamos datos
-        if len(y) == 0:
-            raise ValueError("No hay datos disponibles después de aplicar los filtros")
         
         # Calcular estadísticas observadas
         media_observada = y.mean()
@@ -510,11 +480,6 @@ class Metricas:
         else:
             titulo = titulo_base
         
-        # *** NUEVO: Agregar información de filtros al título ***
-        if self.filtros:
-            filtros_str = ", ".join([f"{k}={v}" for k, v in self.filtros.items()])
-            titulo += f" [Filtros: {filtros_str}]"
-        
         # Configurar layout
         fig.update_layout(
             showlegend=True,
@@ -537,15 +502,10 @@ class Metricas:
         )
         
         return fig, media_control, li, ls, media_observada, std_observada, mas2, menos2, fuera_2sigma, total_fuera_control, fuera_control_inf, fuera_control_sup
-
     def Calculos_Incertidumbre(self):
-        # *** SIN CAMBIOS: El método usa obtener_columna() que ya aplica filtros ***
+        # Usando la nueva estructura de acceso a datos
         y = self.obtener_columna()
         x = list(range(len(y)))
-        
-        # Verificar que tengamos datos
-        if len(y) == 0:
-            raise ValueError("No hay datos disponibles después de aplicar los filtros")
 
         media_observada = y.mean()
         std_observada = y.std()
@@ -557,17 +517,8 @@ class Metricas:
             "Error estándar": [error_estandar] * len(x)
         })
 
-        fig = px.line(df_grafica, x="Índice de muestra", y="Valor", title=None, 
-                     template="simple_white", error_y="Error estándar", error_y_minus="Error estándar")
-        
-        # *** NUEVO: Agregar información de filtros al título ***
-        titulo = "Análisis de Incertidumbre"
-        if self.filtros:
-            filtros_str = ", ".join([f"{k}={v}" for k, v in self.filtros.items()])
-            titulo += f" [Filtros: {filtros_str}]"
-        
+        fig = px.line(df_grafica, x="Índice de muestra", y="Valor", title=None, template="simple_white",error_y="Error estándar",error_y_minus="Error estándar")
         fig.update_layout(
-            title=titulo,
             xaxis=dict(
                 title="Índice de muestra",
                 showline=True,
@@ -584,4 +535,16 @@ class Metricas:
             )
         )
         return fig, media_observada, std_observada, error_estandar
+datos = cargar_archivos_excel_automatico() # cargamos los datos de los archivos 
 
+""" 
+ejemplo para cargar metricas y figuras especificas de la clase }
+metricas = Metricas(
+    datos=datos,
+    archivo='I_R',
+    prueba='colesterol',
+    controles=controles,
+    archivo_control='I-R',
+    prueba_control='colesterol',
+)
+"""
